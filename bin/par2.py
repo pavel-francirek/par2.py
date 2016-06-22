@@ -20,9 +20,7 @@ for dirName, subdirList, fileList in os.walk(rootDir, topdown=False):
         if exitStatus < 2:
             exitStatus = 1
         continue
-    for fname in fileList:
-        pass
-        #print('\t%s' % fname)
+
     if '.dir.par2' not in fileList:
         if not fileList:
             print "Empty directory {0}, skipping".format(dirName)
