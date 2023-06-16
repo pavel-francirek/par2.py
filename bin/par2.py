@@ -20,11 +20,14 @@ for dirName, subdirList, fileList in os.walk(rootDir, topdown=False):
         if exitStatus < 2:
             exitStatus = 1
         continue
+    fileList = [f for f in fileList if not f.startswith('.')]
 
     if '.dir.par2' not in fileList:
         if not fileList:
             print "Empty directory {0}, skipping".format(dirName)
             continue
+        print(dirName)
+        print(fileList)
         parOutput = os.popen('par2create {0}/.dir.par2 {0}/*'.format(dirName)).read()
     else:
         parOutput = os.popen('par2verify {0}/.dir.par2 {0}/*'.format(dirName)).read()
@@ -38,7 +41,7 @@ for dirName, subdirList, fileList in os.walk(rootDir, topdown=False):
         elif "All files are correct, repair is not required." in parOutput:
             #print parOutput
             parFiles = RE_FILES.findall(parOutput)
-            diffFiles = [f for f in list(set(fileList).difference(parFiles)) if not f.endswith('.par2')]
+            diffFiles = [f for f in list(set(fileList).difference(parFiles))]
             if diffFiles:
                 print "WARNING! Unprotected files in directory {0}: {1}".format(dirName, ','.join(diffFiles))
                 if exitStatus < 2:
