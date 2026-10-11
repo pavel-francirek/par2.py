@@ -46,6 +46,27 @@ def test_no_arguments_prints_help_and_exits_critical() -> None:
     assert "--silent" in result.stdout
 
 
+def test_nonexistent_directory_is_critical(tmp_path: Path) -> None:
+    missing = tmp_path / "nope"
+    result = run_script(str(missing))
+    assert result.returncode == par2.CRITICAL
+    assert "Not a directory" in result.stdout
+
+
+def test_file_instead_of_directory_is_critical(tmp_path: Path) -> None:
+    a_file = tmp_path / "a.txt"
+    a_file.write_text("hello\n")
+    result = run_script(str(a_file))
+    assert result.returncode == par2.CRITICAL
+    assert "Not a directory" in result.stdout
+
+
+def test_silent_nonexistent_directory_is_quiet(tmp_path: Path) -> None:
+    result = run_script("--silent", str(tmp_path / "nope"))
+    assert result.returncode == par2.CRITICAL
+    assert result.stdout == ""
+
+
 def test_help_prints_usage_and_exits_ok() -> None:
     result = run_script("--help")
     assert result.returncode == par2.OK

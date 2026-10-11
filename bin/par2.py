@@ -9,7 +9,7 @@ recovery set are skipped.
 Exit status:
     0 -- everything is healthy
     1 -- warnings (skipped directories, recoverable errors, unprotected files)
-    2 -- critical (usage error or unrecoverable corruption)
+    2 -- critical (usage error, missing directory, unrecoverable corruption)
 """
 
 import argparse
@@ -110,7 +110,8 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             "Exit status: 0 = all healthy, 1 = warnings (skipped directories, "
             "recoverable errors, unprotected files), "
-            "2 = critical (usage error or unrecoverable corruption)."
+            "2 = critical (usage error, missing directory or unrecoverable "
+            "corruption)."
         ),
     )
     parser.add_argument(
@@ -147,8 +148,13 @@ def main(argv: list[str]) -> int:
 
     emit: Callable[[str], None] = (lambda _message: None) if args.silent else print
 
+    root = Path(args.directory)
+    if not root.is_dir():
+        emit(f"CRITICAL! Not a directory: {args.directory}")
+        return CRITICAL
+
     status = OK
-    for dir_name, _, _ in os.walk(args.directory, topdown=False):
+    for dir_name, _, _ in os.walk(root, topdown=False):
         status = max(
             status,
             process_directory(Path(dir_name), create=args.create, emit=emit),

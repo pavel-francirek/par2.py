@@ -16,8 +16,8 @@ par2.py --help                 # full help
 ```
 
 Exit status: `0` all healthy, `1` warnings (skipped directories, recoverable
-errors, unprotected files), `2` critical (usage error or unrecoverable
-corruption).
+errors, unprotected files), `2` critical (usage error, missing directory or
+unrecoverable corruption).
 
 ## Development
 
