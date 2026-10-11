@@ -3,5 +3,5 @@
 import sys
 from pathlib import Path
 
-BIN_DIR = Path(__file__).resolve().parent.parent / "bin"
+BIN_DIR: Path = Path(__file__).resolve().parent.parent / "bin"
 sys.path.insert(0, str(BIN_DIR))

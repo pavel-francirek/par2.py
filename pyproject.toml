@@ -15,3 +15,6 @@ select = ["E", "F", "W", "I", "UP", "B"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["par2"]
+
+[tool.pyright]
+extraPaths = ["bin"]

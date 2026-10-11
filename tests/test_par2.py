@@ -1,14 +1,16 @@
 """End-to-end and unit tests for the par2.py directory integrity script."""
 
+import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 import par2
 
-SCRIPT = Path(__file__).resolve().parent.parent / "bin" / "par2.py"
+SCRIPT: Path = Path(__file__).resolve().parent.parent / "bin" / "par2.py"
 
 
 def run_script(*args: str) -> subprocess.CompletedProcess[str]:
@@ -29,7 +31,7 @@ def create(root: Path) -> subprocess.CompletedProcess[str]:
 def make_tree(root: Path) -> None:
     """Create a small directory tree with files in the root and a subdir."""
     (root / "a.txt").write_text("hello\n")
-    subdir = root / "sub"
+    subdir: Path = root / "sub"
     subdir.mkdir()
     (subdir / "b.txt").write_text("world\n")
 
@@ -39,7 +41,7 @@ def test_run_par2_captures_stdout() -> None:
 
 
 def test_no_arguments_prints_help_and_exits_critical() -> None:
-    result = run_script()
+    result: subprocess.CompletedProcess[str] = run_script()
     assert result.returncode == par2.CRITICAL
     assert "usage" in result.stdout.lower()
     assert "--create" in result.stdout
@@ -47,28 +49,30 @@ def test_no_arguments_prints_help_and_exits_critical() -> None:
 
 
 def test_nonexistent_directory_is_critical(tmp_path: Path) -> None:
-    missing = tmp_path / "nope"
-    result = run_script(str(missing))
+    missing: Path = tmp_path / "nope"
+    result: subprocess.CompletedProcess[str] = run_script(str(missing))
     assert result.returncode == par2.CRITICAL
     assert "Not a directory" in result.stdout
 
 
 def test_file_instead_of_directory_is_critical(tmp_path: Path) -> None:
-    a_file = tmp_path / "a.txt"
+    a_file: Path = tmp_path / "a.txt"
     a_file.write_text("hello\n")
-    result = run_script(str(a_file))
+    result: subprocess.CompletedProcess[str] = run_script(str(a_file))
     assert result.returncode == par2.CRITICAL
     assert "Not a directory" in result.stdout
 
 
 def test_silent_nonexistent_directory_is_quiet(tmp_path: Path) -> None:
-    result = run_script("--silent", str(tmp_path / "nope"))
+    result: subprocess.CompletedProcess[str] = run_script(
+        "--silent", str(tmp_path / "nope")
+    )
     assert result.returncode == par2.CRITICAL
     assert result.stdout == ""
 
 
 def test_help_prints_usage_and_exits_ok() -> None:
-    result = run_script("--help")
+    result: subprocess.CompletedProcess[str] = run_script("--help")
     assert result.returncode == par2.OK
     assert "usage" in result.stdout.lower()
     assert "--create" in result.stdout
@@ -77,7 +81,7 @@ def test_help_prints_usage_and_exits_ok() -> None:
 
 def test_creates_par2_sets(tmp_path: Path) -> None:
     make_tree(tmp_path)
-    result = create(tmp_path)
+    result: subprocess.CompletedProcess[str] = create(tmp_path)
     assert result.returncode == par2.OK
     assert (tmp_path / par2.PAR2_NAME).is_file()
     assert (tmp_path / "sub" / par2.PAR2_NAME).is_file()
@@ -85,7 +89,7 @@ def test_creates_par2_sets(tmp_path: Path) -> None:
 
 def test_without_create_missing_set_is_skipped(tmp_path: Path) -> None:
     make_tree(tmp_path)
-    result = run_script(str(tmp_path))
+    result: subprocess.CompletedProcess[str] = run_script(str(tmp_path))
     assert result.returncode == par2.OK
     assert not (tmp_path / par2.PAR2_NAME).exists()
     assert "skipping" in result.stdout
@@ -102,13 +106,13 @@ def test_damaged_file_is_recoverable_warning(tmp_path: Path) -> None:
     # A same-size byte flip inside one data block is always recoverable
     # with the default redundancy, unlike a size change which can make
     # repair impossible.
-    payload = bytes(range(256)) * 40
+    payload: bytes = bytes(range(256)) * 40
     (tmp_path / "a.bin").write_bytes(payload)
     assert create(tmp_path).returncode == par2.OK
-    damaged = bytearray(payload)
+    damaged: bytearray = bytearray(payload)
     damaged[5] ^= 0xFF
     (tmp_path / "a.bin").write_bytes(damaged)
-    result = run_script(str(tmp_path))
+    result: subprocess.CompletedProcess[str] = run_script(str(tmp_path))
     assert result.returncode == par2.WARNING
     assert "WARNING! Recoverable error" in result.stdout
 
@@ -120,7 +124,7 @@ def test_missing_file_without_recovery_is_critical(tmp_path: Path) -> None:
     for vol in tmp_path.glob(".dir.vol*.par2"):
         vol.unlink()
     (tmp_path / "a.txt").unlink()
-    result = run_script(str(tmp_path))
+    result: subprocess.CompletedProcess[str] = run_script(str(tmp_path))
     assert result.returncode == par2.CRITICAL
     assert "CRITICAL! Unrecoverable error" in result.stdout
 
@@ -129,16 +133,16 @@ def test_unprotected_file_warns(tmp_path: Path) -> None:
     make_tree(tmp_path)
     assert create(tmp_path).returncode == par2.OK
     (tmp_path / "extra.txt").write_text("unprotected\n")
-    result = run_script(str(tmp_path))
+    result: subprocess.CompletedProcess[str] = run_script(str(tmp_path))
     assert result.returncode == par2.WARNING
     assert "Unprotected files" in result.stdout
     assert "extra.txt" in result.stdout
 
 
 def test_empty_directory_is_skipped(tmp_path: Path) -> None:
-    empty = tmp_path / "empty"
+    empty: Path = tmp_path / "empty"
     empty.mkdir()
-    result = run_script(str(empty))
+    result: subprocess.CompletedProcess[str] = run_script(str(empty))
     assert result.returncode == par2.OK
     assert "Empty directory" in result.stdout
 
@@ -147,7 +151,7 @@ def test_silent_produces_no_output(tmp_path: Path) -> None:
     make_tree(tmp_path)
     assert create(tmp_path).returncode == par2.OK
     (tmp_path / "extra.txt").write_text("unprotected\n")
-    result = run_script("--silent", str(tmp_path))
+    result: subprocess.CompletedProcess[str] = run_script("--silent", str(tmp_path))
     assert result.returncode == par2.WARNING
     assert result.stdout == ""
     assert result.stderr == ""
@@ -155,7 +159,9 @@ def test_silent_produces_no_output(tmp_path: Path) -> None:
 
 def test_silent_with_create_produces_no_output(tmp_path: Path) -> None:
     make_tree(tmp_path)
-    result = run_script("--silent", "--create", str(tmp_path))
+    result: subprocess.CompletedProcess[str] = run_script(
+        "--silent", "--create", str(tmp_path)
+    )
     assert result.returncode == par2.OK
     assert result.stdout == ""
     assert (tmp_path / par2.PAR2_NAME).is_file()
@@ -179,7 +185,7 @@ def test_process_directory_skips_without_create(
 def test_process_directory_emit_callback(tmp_path: Path) -> None:
     messages: list[str] = []
     (tmp_path / "a.txt").write_text("hello\n")
-    status = par2.process_directory(tmp_path, create=True, emit=messages.append)
+    status: int = par2.process_directory(tmp_path, create=True, emit=messages.append)
     assert status == par2.OK
     assert messages  # creation reports progress when not silent
 
@@ -204,3 +210,46 @@ def test_main_returns_critical_without_args(
 ) -> None:
     assert par2.main(["par2.py"]) == par2.CRITICAL
     assert "usage" in capsys.readouterr().out.lower()
+
+
+def test_json_reports_clean_tree(tmp_path: Path) -> None:
+    make_tree(tmp_path)
+    assert create(tmp_path).returncode == par2.OK
+    result: subprocess.CompletedProcess[str] = run_script("--json", str(tmp_path))
+    assert result.returncode == par2.OK
+    report: dict[str, Any] = json.loads(result.stdout)
+    assert report["status"] == "ok"
+    assert report["exit_code"] == par2.OK
+    assert {d["path"] for d in report["directories"]} == {
+        str(tmp_path),
+        str(tmp_path / "sub"),
+    }
+
+
+def test_json_reports_damaged_directory(tmp_path: Path) -> None:
+    payload: bytes = bytes(range(256)) * 40
+    (tmp_path / "a.bin").write_bytes(payload)
+    assert create(tmp_path).returncode == par2.OK
+    damaged: bytearray = bytearray(payload)
+    damaged[5] ^= 0xFF
+    (tmp_path / "a.bin").write_bytes(damaged)
+    result: subprocess.CompletedProcess[str] = run_script("--json", str(tmp_path))
+    assert result.returncode == par2.WARNING
+    report: dict[str, Any] = json.loads(result.stdout)
+    assert report["status"] == "warning"
+    damaged_dirs: list[Any] = [
+        d for d in report["directories"] if d["status"] == "warning"
+    ]
+    assert len(damaged_dirs) == 1
+    assert damaged_dirs[0]["path"] == str(tmp_path)
+    assert damaged_dirs[0]["messages"]
+
+
+def test_json_missing_directory_is_critical(tmp_path: Path) -> None:
+    result: subprocess.CompletedProcess[str] = run_script(
+        "--json", str(tmp_path / "nope")
+    )
+    assert result.returncode == par2.CRITICAL
+    report: dict[str, Any] = json.loads(result.stdout)
+    assert report["status"] == "critical"
+    assert "Not a directory" in report["error"]
